@@ -11,13 +11,9 @@ public:
     ProgramOptions();
     ~ProgramOptions();
 
-    enum class COMMAND_TYPE {
-        ENCRYPT,
-        DECRYPT,
-        CHECKSUM,
-    };
+    enum class COMMAND_TYPE { ENCRYPT, DECRYPT, CHECKSUM, UNKNOWN };
 
-    void Parse(int argc, char *argv[]);
+    bool Parse(int argc, char *argv[]);
 
     COMMAND_TYPE GetCommand() const { return command_; }
     std::string GetInputFile() const { return inputFile_; }
@@ -36,7 +32,11 @@ private:
     std::string outputFile_;
     std::string password_;
 
+    std::string strCommand;
+
     boost::program_options::options_description desc_;
+
+    ProgramOptions::COMMAND_TYPE strToCmd(const std::string str);
 };
 
 }  // namespace CryptoGuard
