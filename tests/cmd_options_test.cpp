@@ -74,7 +74,7 @@ TEST(ProgramOptions, UNKNOWN_OPTION) {
 TEST(ProgramOptions, MISSING_OPTION) {
     CryptoGuard::ProgramOptions opts;
     std::string args = "programName --input /path/to/input/file --output "
-                       "/path/to/output/file --password !@#$ --verbose";
+                       "/path/to/output/file --password !@#$";
 
     auto rawOpts = getArgs(args);
     bool ok = opts.Parse(rawOpts.first, rawOpts.second.get());
