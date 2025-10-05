@@ -21,22 +21,22 @@ public:
     std::string GetPassword() const { return password_; }
 
 private:
-    COMMAND_TYPE command_;
     const std::unordered_map<std::string_view, COMMAND_TYPE> commandMapping_ = {
         {"encrypt", ProgramOptions::COMMAND_TYPE::ENCRYPT},
         {"decrypt", ProgramOptions::COMMAND_TYPE::DECRYPT},
         {"checksum", ProgramOptions::COMMAND_TYPE::CHECKSUM},
     };
 
+    COMMAND_TYPE command_;
     std::string inputFile_;
     std::string outputFile_;
     std::string password_;
 
-    std::string strCommand;
-
     boost::program_options::options_description desc_;
 
     ProgramOptions::COMMAND_TYPE strToCmd(const std::string str);
+
+    bool fail(const std::string msg);
 };
 
 }  // namespace CryptoGuard

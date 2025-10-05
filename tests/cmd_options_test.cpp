@@ -6,6 +6,11 @@
 
 typedef CryptoGuard::ProgramOptions::COMMAND_TYPE PO_TYPE;
 
+/* Вспомогательная функция для парсинга аргументов.
+   Принимает inputStr - строку с аргументами командной строки.
+   Возвращает std<pair>, где
+   first  - количество аргументов,
+   second - unique_ptr на массив указателей char* на сами аргументы */
 std::pair<int, std::unique_ptr<char *[]>> getArgs(std::string &inputStr) {
     if (inputStr.empty())
         return {0, nullptr};
@@ -34,24 +39,17 @@ std::pair<int, std::unique_ptr<char *[]>> getArgs(std::string &inputStr) {
     return res;
 }
 
-TEST(ProgramOptions, VALID_OPTIONS) {
-    CryptoGuard::ProgramOptions opts;
-    std::string args =
-        "programName --command encrypt --input /path/to/input/file --output /path/to/output/file --password !@#$";
+/*Валидная команда encrypt*/
+TEST(ProgramOption, VALID_ENCRYPT) {
+    testing::internal::CaptureStderr();
 
-    auto rawOpts = getArgs(args);
-    bool ok = opts.Parse(rawOpts.first, rawOpts.second.get());
-
-    EXPECT_TRUE(ok);
-}
-
-TEST(ProgramOptions, ENCRYPT_COMMAND) {
     CryptoGuard::ProgramOptions opts;
     std::string args = "programName --command encrypt --input /path/to/input/file --output "
                        "/path/to/output/file --password !@#$";
-
     auto rawOpts = getArgs(args);
     bool ok = opts.Parse(rawOpts.first, rawOpts.second.get());
+
+    testing::internal::GetCapturedStderr();
 
     EXPECT_TRUE(ok);
     EXPECT_EQ(PO_TYPE::ENCRYPT, opts.GetCommand());
@@ -60,18 +58,58 @@ TEST(ProgramOptions, ENCRYPT_COMMAND) {
     EXPECT_EQ("!@#$", opts.GetPassword());
 }
 
-TEST(ProgramOptions, UNKNOWN_OPTION) {
+/*Валидная команда decrypt*/
+TEST(ProgramOption, VALID_DECRYPT) {
+    testing::internal::CaptureStderr();
     CryptoGuard::ProgramOptions opts;
-    std::string args = "programName --command encrypt --input /path/to/input/file --output "
-                       "/path/to/output/file --password !@#$ --verbose";
+    std::string args = "programName --command decrypt --input /path/to/input/file --output "
+                       "/path/to/output/file --password !@#$";
 
     auto rawOpts = getArgs(args);
     bool ok = opts.Parse(rawOpts.first, rawOpts.second.get());
 
+    testing::internal::GetCapturedStderr();
+
+    EXPECT_TRUE(ok);
+    EXPECT_EQ(PO_TYPE::DECRYPT, opts.GetCommand());
+    EXPECT_EQ("/path/to/input/file", opts.GetInputFile());
+    EXPECT_EQ("/path/to/output/file", opts.GetOutputFile());
+    EXPECT_EQ("!@#$", opts.GetPassword());
+}
+
+/*Проверка на неизвестные аргументы командной строки*/
+TEST(ProgramOption, UNKNOWN_ARGS) {
+    testing::internal::CaptureStderr();
+    CryptoGuard::ProgramOptions opts;
+    std::string args = "programName --command checksum --input /path/to/input/file EXTRA_ARG";
+
+    auto rawOpts = getArgs(args);
+    bool ok = opts.Parse(rawOpts.first, rawOpts.second.get());
+
+    testing::internal::GetCapturedStderr();
+
     EXPECT_FALSE(ok);
 }
 
-TEST(ProgramOptions, MISSING_OPTION) {
+/*Проверка опции help */
+TEST(ProgramOption, HELP) {
+    testing::internal::CaptureStderr();
+
+    CryptoGuard::ProgramOptions opts;
+    std::string args = "programName --help --command checksum --input /path/to/file";
+
+    auto rawOpts = getArgs(args);
+    bool ok = opts.Parse(rawOpts.first, rawOpts.second.get());
+
+    testing::internal::GetCapturedStderr();
+
+    EXPECT_TRUE(ok);
+}
+
+/*Отсутствие опции command */
+TEST(ProgramOption, COMMAND_OPTION_MISSING) {
+    testing::internal::CaptureStderr();
+
     CryptoGuard::ProgramOptions opts;
     std::string args = "programName --input /path/to/input/file --output "
                        "/path/to/output/file --password !@#$";
@@ -79,27 +117,70 @@ TEST(ProgramOptions, MISSING_OPTION) {
     auto rawOpts = getArgs(args);
     bool ok = opts.Parse(rawOpts.first, rawOpts.second.get());
 
+    testing::internal::GetCapturedStderr();
+
     EXPECT_FALSE(ok);
 }
 
-TEST(ProgramOptions, UNKNOWN_CMD) {
+/*Проверка наличия обязательной опции input*/
+TEST(ProgramOption, INPUT_OPTION_MISSING) {
+    testing::internal::CaptureStderr();
+
     CryptoGuard::ProgramOptions opts;
-    std::string args = "programName --command INVALIDCMD --input /path/to/input/file --output "
+    std::string args = "programName --command checksum --output "
                        "/path/to/output/file --password !@#$";
 
     auto rawOpts = getArgs(args);
     bool ok = opts.Parse(rawOpts.first, rawOpts.second.get());
 
-    EXPECT_TRUE(ok);
-    EXPECT_EQ(PO_TYPE::UNKNOWN, opts.GetCommand());
+    testing::internal::GetCapturedStderr();
+
+    EXPECT_FALSE(ok);
 }
 
-TEST(ProgramOptions, HELP) {
+/*Проверка отсутствия опций кроме input при команде checksum*/
+TEST(ProgramOption, CHECKSUM_EXTRA_OPT) {
+    testing::internal::CaptureStderr();
+
     CryptoGuard::ProgramOptions opts;
-    std::string args = "programName --help";
+    std::string args = "programName --command checksum --input /path/to/input/file --password !@#$";
 
     auto rawOpts = getArgs(args);
     bool ok = opts.Parse(rawOpts.first, rawOpts.second.get());
 
-    EXPECT_TRUE(ok);
+    testing::internal::GetCapturedStderr();
+
+    EXPECT_FALSE(ok);
+}
+
+/*Неизвестная опция*/
+TEST(ProgramOption, UNKNOWN_OPTION) {
+    testing::internal::CaptureStderr();
+
+    CryptoGuard::ProgramOptions opts;
+    std::string args = "programName --command encrypt --input /path/to/input/file --output "
+                       "/path/to/output/file --password !@#$ --UNKNOWN_OPT";
+
+    auto rawOpts = getArgs(args);
+    bool ok = opts.Parse(rawOpts.first, rawOpts.second.get());
+
+    testing::internal::GetCapturedStderr();
+
+    EXPECT_FALSE(ok);
+}
+
+/*Одна опция указана дважды*/
+TEST(ProgramOption, MULTIPLE_OPT) {
+    testing::internal::CaptureStderr();
+
+    CryptoGuard::ProgramOptions opts;
+    std::string args = "programName --command encrypt --input /path/to/input/file --input "
+                       "/path/to/input/file_2 --password !@#$";
+
+    auto rawOpts = getArgs(args);
+    bool ok = opts.Parse(rawOpts.first, rawOpts.second.get());
+
+    testing::internal::GetCapturedStderr();
+
+    EXPECT_FALSE(ok);
 }
